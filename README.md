@@ -182,6 +182,8 @@ Details and citation: [docs/dataset.md](docs/dataset.md)
 
 `notebooks/ml_sublime.py` is the unmodified Colab export. It uses `!pip` magics and is **not** the supported entry point. The package above is the maintained implementation.
 
+Development note: The original experiments were implemented by me and my team. The repository was later refactored from a notebook-style implementation into a modular Python package with the assistance of AI coding tools (Cursor), followed by review and validation.
+
 ---
 
 ## License
