@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Experiment artifacts
+lightning_logs/
+wandb/
+runs/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# Data caches (Hugging Face datasets, tokenizers)
+.cache/
+data/
+datasets_cache/
+hf_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
