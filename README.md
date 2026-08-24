@@ -1,13 +1,13 @@
 # SNLI Natural Language Inference Classifier
 
-Train and compare two approaches to **natural language inference** on the [Stanford Natural Language Inference (SNLI)](https://nlp.stanford.edu/projects/snli/) corpus:
+Modular Python package for **natural language inference** on the [Stanford Natural Language Inference (SNLI)](https://nlp.stanford.edu/projects/snli/) corpus.
+
+Given a **premise** and a **hypothesis**, the model predicts **entailment**, **neutral**, or **contradiction**.
+
+Two approaches are implemented as separate modules:
 
 1. **Classical baseline** — TF-IDF n-grams + logistic regression  
-2. **Neural model** — bidirectional LSTM sentence pair encoder, trained with PyTorch Lightning  
-
-Given a **premise** and a **hypothesis**, the model predicts one of three relations: **entailment**, **neutral**, or **contradiction**.
-
-The executable source is an unmodified Google Colab export. Documentation in this repository explains the dataset, analysis, and modeling choices in English.
+2. **Neural model** — bidirectional LSTM pair encoder (PyTorch Lightning)
 
 ---
 
@@ -15,29 +15,26 @@ The executable source is an unmodified Google Colab export. Documentation in thi
 
 - [What this project does](#what-this-project-does)
 - [Repository layout](#repository-layout)
-- [How the pipeline is organized](#how-the-pipeline-is-organized)
-- [Requirements](#requirements)
+- [Installation](#installation)
 - [How to run](#how-to-run)
+- [Using the modules in Python](#using-the-modules-in-python)
 - [Dataset](#dataset)
 - [Models](#models)
-- [Further reading](#further-reading)
+- [Original notebook](#original-notebook)
 - [License](#license)
 
 ---
 
 ## What this project does
 
-The notebook script:
+- Loads SNLI from Hugging Face Datasets (`train` / `validation` / `test`)
+- Drops unlabeled rows (`label == -1`) and maps `0/1/2` to class names
+- Plots class balance and sentence lengths
+- Trains a TF-IDF + logistic regression baseline (vectorizer fitted on **train only**)
+- Builds a vocabulary on **train only**, encodes pairs, trains a BiLSTM
+- Writes classification reports and confusion-matrix figures under `outputs/`
 
-- loads SNLI (`train` / `validation` / `test`) from Hugging Face Datasets;
-- maps numeric labels to readable class names;
-- removes invalid labels (`-1`);
-- inspects class balance and sentence length;
-- trains a TF-IDF + logistic regression baseline (including a larger n-gram setting and optional class weights);
-- builds a word vocabulary, encodes sentence pairs, and trains a BiLSTM classifier;
-- reports precision, recall, F1, and confusion matrices on held-out splits created from the training table.
-
-It does **not** currently evaluate on the official SNLI test split as the main reported loop; validation metrics come from stratified 80/20 splits of the filtered training data (see [docs](docs/classical-baseline.md)).
+By default, evaluation uses the **official SNLI validation split**. Pass `--split internal` to reproduce the original notebook’s 80/20 split of the training table.
 
 ---
 
@@ -45,120 +42,148 @@ It does **not** currently evaluate on the official SNLI test split as the main r
 
 ```text
 snli-nli-classifier/
-├── README.md                 # This file
-├── LICENSE                   # MIT
-├── requirements.txt          # Python dependencies
-├── .gitignore
-├── notebooks/
-│   └── ml_sublime.py         # Original Colab script (code unchanged)
-└── docs/
-    ├── dataset.md            # SNLI task, labels, citation
-    ├── exploratory-analysis.md
-    ├── classical-baseline.md # TF-IDF + logistic regression
-    └── neural-model.md       # BiLSTM + Lightning
+├── README.md
+├── LICENSE
+├── pyproject.toml            # installable package + snli-nli CLI
+├── requirements.txt
+├── src/snli_nli/             # importable modules
+├── docs/                     # dataset, models, architecture
+└── notebooks/
+    └── ml_sublime.py         # original Colab export (reference only)
 ```
 
-| Path | Purpose |
+Module map (see [docs/architecture.md](docs/architecture.md) for the data flow):
+
+| Module | Role |
 | --- | --- |
-| `notebooks/ml_sublime.py` | Full experiment as exported from Colab. **Do not treat this as a refactored library** — run it as a notebook or paste it into Colab. |
-| `docs/` | Standalone explanations written for GitHub readers (no code changes). |
+| `constants` | Label names, PAD / UNK tokens |
+| `data` | Load, clean, concatenate pairs, optional subsample |
+| `eda` | Exploratory plots |
+| `reporting` | Shared metrics + confusion matrices |
+| `baseline` | TF-IDF + logistic regression |
+| `tokenization` | Tokenize, vocabulary, padding |
+| `dataset` | `SNLIDataset` |
+| `model` | `SNLIModel` Lightning module |
+| `evaluate` | Collect predictions |
+| `train_neural` | Lightning training loop |
+| `cli` | Command-line interface |
 
 ---
 
-## How the pipeline is organized
+## Installation
 
-The original file is a **linear notebook**, not a package. Sections appear in this order:
-
-| Stage | What happens |
-| --- | --- |
-| **Load** | `load_dataset("snli")` → pandas frames for train, validation, and test |
-| **Labels** | `{0,1,2}` → `entailment` / `neutral` / `contradiction`; drop `-1` |
-| **EDA** | class counts, premise/hypothesis word-length histograms and boxplots |
-| **Baseline** | concatenate sentences with `[SEP]`, TF-IDF, logistic regression, metrics |
-| **Neural** | tokenize, build vocab, `SNLIDataset` + DataLoaders, `SNLIModel`, Lightning `Trainer` |
-| **Evaluate** | classification report and confusion-matrix heatmap on the neural validation loader |
-| **Early stopping** | second training run monitoring `val_loss` |
-
-Detailed write-ups:
-
-- [Dataset](docs/dataset.md)
-- [Exploratory analysis](docs/exploratory-analysis.md)
-- [Classical baseline](docs/classical-baseline.md)
-- [Neural model](docs/neural-model.md)
-
----
-
-## Requirements
-
-- Python 3.9+ recommended  
-- Optional but strongly recommended for the LSTM: a **CUDA GPU**  
-- Network access on first run (SNLI download)
-
-Install locally:
+Python 3.9+ is recommended. A GPU is optional but much faster for the LSTM.
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/Girasole02/snli-nli-classifier.git
+cd snli-nli-classifier
+python -m venv .venv
 ```
 
-The script also contains Colab-style `!pip install` lines (`datasets`, `transformers`, `pytorch_lightning`, `tqdm`). Those work inside **Google Colab** and Jupyter magics; they are **not** valid in a standard `python notebooks/ml_sublime.py` invocation.
+Activate the environment, then:
+
+```bash
+pip install -e .
+```
+
+This installs the `snli_nli` package and the `snli-nli` command. First run downloads SNLI (network required).
 
 ---
 
 ## How to run
 
-### Option A — Google Colab (closest to the original)
+```bash
+# Exploratory plots
+snli-nli eda
 
-1. Create a new Colab notebook.  
-2. Open `notebooks/ml_sublime.py` and copy the cells (each `"""..."""` block is a markdown/comment cell from the export).  
-3. Runtime → GPU if you want faster LSTM training.  
-4. Run all cells from top to bottom.
+# Classical baseline
+snli-nli baseline
 
-### Option B — Jupyter
+# BiLSTM (use a GPU if you can)
+snli-nli neural --max-epochs 10
 
-Convert or paste the file into a notebook environment that accepts `!pip` magics, then run sequentially. The script uses `tqdm.notebook`.
+# All stages
+snli-nli all
+```
 
-### Option C — Local Python
+Equivalent without installing the script:
 
-`python notebooks/ml_sublime.py` will **fail** on `!pip install` because that syntax is IPython/Colab-only. Use Colab/Jupyter, or run equivalent `pip install` commands yourself and execute only the Python portions in an interactive session.
+```bash
+python -m snli_nli baseline
+```
 
-First run downloads SNLI; subsequent runs can reuse the Hugging Face cache.
+Useful flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--output-dir PATH` | Figures, reports, checkpoints (default: `outputs`) |
+| `--split official` | SNLI validation set (default) |
+| `--split internal` | 80/20 split of filtered train |
+| `--max-train-samples N` | Stratified cap for a quick CPU test |
+| `--max-epochs`, `--batch-size`, `--patience` | Neural training |
+| `--seed` | Reproducibility |
+
+Example smoke test:
+
+```bash
+snli-nli all --max-train-samples 3000 --max-epochs 1 --split official
+```
+
+---
+
+## Using the modules in Python
+
+```python
+from pathlib import Path
+from snli_nli.data import load_snli_frames, clean_split
+from snli_nli.baseline import train_and_evaluate_baseline
+from snli_nli.train_neural import train_and_evaluate_neural
+
+frames = load_snli_frames()
+train = clean_split(frames["train"])
+validation = clean_split(frames["validation"])
+
+train_and_evaluate_baseline(train, validation, Path("outputs/baseline"))
+train_and_evaluate_neural(train, validation, Path("outputs/neural"), max_epochs=5)
+```
+
+Tokenizer only:
+
+```python
+from snli_nli.tokenization import tokenize, build_vocab
+
+tokens = tokenize("A man is playing a guitar on stage.")
+```
 
 ---
 
 ## Dataset
 
-**SNLI** (Bowman et al., 2015) is a crowd-annotated corpus of English premise–hypothesis pairs.
+**SNLI** (Bowman et al., 2015): English premise–hypothesis pairs.
 
 | Label | Meaning |
 | --- | --- |
 | Entailment | Hypothesis follows from the premise |
-| Neutral | Hypothesis is neither guaranteed nor contradicted |
+| Neutral | Neither entailed nor contradicted |
 | Contradiction | Hypothesis conflicts with the premise |
 
-See [docs/dataset.md](docs/dataset.md) for splits, the `-1` label, and citation.
+Details and citation: [docs/dataset.md](docs/dataset.md)
 
 ---
 
 ## Models
 
-### TF-IDF + logistic regression
-
-Sparse n-gram features over the concatenated pair. Fast CPU baseline; later cells increase vocabulary size and n-gram order, then try `class_weight="balanced"`.
-
-### Bidirectional LSTM (PyTorch Lightning)
-
-Shared embedding + BiLSTM over premise and hypothesis; concatenated hidden states go to a 3-way linear classifier. Trained with Adam and, in a later cell, early stopping on validation loss.
+- **TF-IDF + logistic regression** — concatenated `premise [SEP] hypothesis`, up to trigrams, optional class weights. [docs/classical-baseline.md](docs/classical-baseline.md)
+- **BiLSTM** — shared embedding and bidirectional LSTM over each sentence; concatenated hidden states → 3-way classifier; early stopping on `val_loss`. [docs/neural-model.md](docs/neural-model.md)
 
 ---
 
-## Further reading
+## Original notebook
 
-- SNLI project page: [https://nlp.stanford.edu/projects/snli/](https://nlp.stanford.edu/projects/snli/)  
-- Hugging Face dataset: [https://huggingface.co/datasets/snli](https://huggingface.co/datasets/snli)  
-- Original Colab (from the file header): [ML SUBLIME notebook](https://colab.research.google.com/drive/1lpkP8Fvu5j2lbW1OAO8EcU8FkeOg5LXm)
+`notebooks/ml_sublime.py` is the unmodified Colab export. It uses `!pip` magics and is **not** the supported entry point. The package above is the maintained implementation.
 
 ---
 
 ## License
 
-This repository is released under the [MIT License](LICENSE). SNLI is a separate dataset with its own terms; follow the Stanford / Hugging Face dataset licenses when redistributing data.
+[MIT License](LICENSE). SNLI is a separate dataset; follow Stanford / Hugging Face terms when using the data.

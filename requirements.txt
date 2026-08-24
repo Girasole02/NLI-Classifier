@@ -1,13 +1,10 @@
-# Runtime dependencies used by notebooks/ml_sublime.py
-# Versions are left unpinned so Colab / local environments can resolve a compatible stack.
+# Runtime dependencies for the snli_nli package
 pandas
 numpy
 seaborn
 matplotlib
-plotly
 datasets
 scikit-learn
-transformers
 torch
 pytorch-lightning
 tqdm

@@ -13,9 +13,9 @@ The second half of the notebook trains a **pair encoder**: each sentence is embe
 
 ## Encoding and batching
 
-`SNLIDataset` converts token lists to fixed-length index sequences (`max_len=50` in the dataset class). A standalone helper `encode_sentence` earlier in the file uses `max_length=20`; the **DataLoader path uses the class method**, which is what training actually consumes.
+`SNLIDataset` (`src/snli_nli/dataset.py`) converts token lists to fixed-length index sequences (`max_len=50` by default). `encode_sentence` in `tokenization.py` **returns** the padded list (the standalone helper in the Colab export built the list but did not return it).
 
-Batches of size **64** are built with PyTorch `DataLoader`. The training table is again split **80/20**, stratified by label.
+Batches of size **64** are built with PyTorch `DataLoader`. Vocabulary is built from **training tokens only**.
 
 ## Architecture (`SNLIModel`)
 
@@ -40,12 +40,8 @@ Two `Trainer` runs appear in sequence:
 
 After the first fit, predictions on the validation loader are collected to print a classification report and a Seaborn heatmap of the confusion matrix.
 
-## Dependencies that are imported but not used for this LSTM
-
-The original Colab file also installs / imports **Transformers** (`DistilBertTokenizerFast`, `DistilBertForSequenceClassification`, `Trainer`, `TrainingArguments`). Those objects are **not used** in the LSTM pipeline that follows. They are left untouched in the source file.
-
 ## Practical notes
 
-- Training is much faster on a **GPU** (Colab with GPU runtime, or a local CUDA install).
-- Hugging Face will **download SNLI** on first run; allow disk space and network access.
-- `tqdm.notebook` is aimed at Jupyter / Colab. In a plain terminal you may prefer the standard `tqdm` progress bars (again: the source file is not changed here).
+- Training is much faster on a **GPU**.
+- Hugging Face downloads SNLI on first run.
+- Run `snli-nli neural` or `python -m snli_nli neural` from the installed package.

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snli-nli-classifier"
+version = "1.0.0"
+description = "Modular SNLI natural language inference: TF-IDF baseline and BiLSTM pair encoder."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "snli-nli-classifier authors" }]
+dependencies = [
+    "pandas",
+    "numpy",
+    "seaborn",
+    "matplotlib",
+    "datasets",
+    "scikit-learn",
+    "torch",
+    "pytorch-lightning",
+    "tqdm",
+]
+
+[project.scripts]
+snli-nli = "snli_nli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Girasole02/snli-nli-classifier"
+
+[tool.setuptools.packages.find]
+where = ["src"]

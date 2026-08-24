@@ -20,14 +20,15 @@ The `[SEP]` marker is a lightweight way to tell the vectorizer that the two sent
 - **IDF** (inverse document frequency) down-weights words that appear in many examples (for example function words).
 - **n-grams** capture local phrases, not only single tokens.
 
-Two configurations appear in the notebook:
+Default package settings (`src/snli_nli/baseline.py`):
 
-| Stage | `max_features` | `ngram_range` | Notes |
-| --- | --- | --- | --- |
-| First run | 10,000 | (1, 2) | Unigrams and bigrams |
-| Improved run | 30,000 | (1, 3) | Larger vocabulary, up to trigrams |
+| Setting | Value |
+| --- | --- |
+| `max_features` | 30,000 |
+| `ngram_range` | (1, 3) |
+| `class_weight` | `"balanced"` |
 
-A cleaning experiment lowercases text and strips punctuation into `text_clean`, but the **second fit still transforms `df_train["text"]`** (the original concatenated field). The Python file is kept as-is; if you re-run experiments, you may want to compare `text` vs `text_clean` yourself.
+The vectorizer is **fitted on the training split only**, then applied to validation with `transform`. The original Colab script fitted TF-IDF on the full training table before splitting, which leaks validation statistics into IDF.
 
 ## Classifier
 
